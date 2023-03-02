@@ -1,0 +1,393 @@
+---
+title: "HW2: Wildfires in California Report"
+author: "Samuel Rho"
+output: 
+  html_document:
+    toc_float: TRUE
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# {.tabset .tabset-fade .tabset-pills}
+## A) Fire Perimeters Data
+[California Fire Perimeters dataset](https://gis.data.ca.gov/datasets/CALFIRE-Forestry::california-fire-perimeters-all-1/about)
+
+[Associated data dictionary](https://frap.fire.ca.gov/frap-projects/fire-perimeters/)
+
+### 0) Packages / Libraries
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(scales)
+```
+
+### 1) Importing Data
+```{r}
+# assuming the CSV file is in the same directory as this Rmd file
+dat = read_csv(
+  file = "California_Fire_Perimeters.csv",
+  col_types = list(
+    OBJECTID = col_integer(),
+    YEAR = col_integer(),
+    STATE = col_character(),
+    AGENCY = col_character(),
+    UNIT_ID = col_character(),
+    FIRE_NAME = col_character(),
+    INC_NUM = col_character(),
+    ALARM_DATE = col_datetime(format = "%Y/%m/%d %H:%M:%S %z"),
+    CONT_DATE = col_datetime(format = "%Y/%m/%d %H:%M:%S %z"),
+    CAUSE = col_integer(),
+    REPORT_AC = col_double(),
+    GIS_ACRES = col_double(),
+    C_METHOD = col_integer(),
+    OBJECTIVE = col_integer(),
+    FIRE_NUM = col_character()
+  ))
+```
+
+### 2) Converting `CAUSE` into a factor
+The `CAUSE` variable is numerically encoded. Re-encode the values into their textual description as seen in the data dictionary.
+```{r}
+# auxiliary vector of CAUSE categories
+cause_labels = c(
+  'Lightning',
+  'Equipment Use',
+  'Smoking',
+  'Campfire',
+  'Debris',
+  'Railroad',
+  'Arson',
+  'Playing with Fire',
+  'Miscellaneous',
+  'Vehicle',
+  'Power Line',
+  'Firefighter Training',
+  'Non-Firefighter Training',
+  'Unknown/Unidentified',
+  'Structure',
+  'Aircraft',
+  'Escaped Prescribed Burn'
+)
+
+# Cause number 19, i.e., "Illegal Alien Campfire" consolidated with "Campfire".
+dat$CAUSE[dat$CAUSE == 19] = 4
+
+# re-encode from numbers to textual categories (and make it into a factor)
+dat$CAUSE = factor(dat$CAUSE, labels = cause_labels)
+```
+
+
+### 3) Adding column `MONTH`
+Extract the month from the alarm date and add it to a new column in the data frame.
+```{r}
+dat = dat %>% mutate(MONTH = month(ALARM_DATE))
+```
+
+
+### 4) Adding column `DURATION`
+Construct a duration column by subtracting the alarm date from the containment date.
+```{r}
+# duration of a fire (in days)
+dat = dat %>% 
+  mutate(DURATION = interval(ALARM_DATE, CONT_DATE) / ddays(1))
+```
+
+
+### 5) Adding column `DECADE`
+Add a new column to categorize the fires by decade.
+```{r}
+# auxiliary vector of decade values (or labels)
+decade_labels = paste0(
+  seq(from = 1870, to = 2010, by = 10),
+  sep = "-",
+  c(seq(from = 1879, to = 2009, by = 10), 2021)
+)
+
+# categorizing YEAR into decades
+dat$DECADE = cut(
+  x = dat$YEAR, 
+  breaks = c(seq(from = 1870, to = 2010, by = 10), 2022),
+  right = FALSE,
+  labels = decade_labels)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 6) Adding column `MONTH_name`
+Add a new column `MONTH_NAME` to the data frame to re-encode the values in `MONTH` into their month names. This will be useful for sections C.3 and C.4.
+```{r}
+# auxiliary vector of MONTH categories
+month_labels = c(
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+)
+
+# re-encode from numbers to textual categories (and make it into a factor column)
+dat$MONTH_NAME = factor(dat$MONTH, labels = month_labels)
+```
+## B) Univariate Exploratory Data Analysis
+
+This data set includes some fires outside of California.
+```{r}
+# State and the number of entries from that state in this data set.
+group_by(dat, STATE) %>% 
+  count(STATE) %>% 
+  arrange(desc(n))
+```
+
+The range of years is between 1878 to 2021.
+```{r}
+min(distinct(dat,YEAR), na.rm = TRUE)
+max(distinct(dat,YEAR), na.rm = TRUE)
+```
+
+
+The year with the most fires is 2021.
+```{r}
+max(count(filter(dat, !is.na(YEAR)), YEAR))
+```
+
+
+The longest duration of a fire is 3,319 days.
+```{r}
+max(dat$DURATION, na.rm = TRUE)
+```
+
+
+The most common cause of a fire is "Unknown/Unidentified".
+```{r}
+arrange(count(dat, CAUSE), desc(n))
+```
+
+
+
+
+## C.1) Top-20 Largest California Wildfires
+A [pdf report](https://www.fire.ca.gov/media/4jandlhh/top20_acres.pdf) provided by the California Department of Forestry and Fire Protection ranks the top 20 largest fires in California by acres burned. Use the prepared data set `dat` to construct a similar top 20 list.
+
+
+A data table (tibble) of the “Top 20 Largest California Wildfires” arranged in descending `GIS_ACRES` order.
+```{r}
+# This data set contains fires outside of California, so exclude those.
+# Select only the relevant columns to make the table easier to read.
+# Rank the fires from most acres burned to least and show only the top 20.
+top20 <- dat %>% 
+  filter(STATE == 'CA') %>% 
+  select(FIRE_NAME, CAUSE, YEAR, ALARM_DATE, GIS_ACRES) %>% 
+  arrange(desc(GIS_ACRES)) %>% 
+  slice_head(n=20)
+top20
+```
+
+### Discrepancies between `top20` and `top20_acres.pdf`[^1]
+A comparison between the content of this table and the pdf report reveal some discrepancies. Conjectures for the reason behind such mismatches are listed below:
+
+1. The pdf report lists Mendocino Complex as the third largest fire with **459,123** acres burnt, whereas `top20` lists the Ranch Fire. A quick Wikipedia search reveals that the Mendocino Complex Fire consisted of two wildfires, the River Fire and the Ranch Fire.[^2] The sum of the acres burned from these two fires equals **459,123**, confirming that this is the reason for the mismatch.
+```{r}
+round(sum(filter(dat, as.Date(ALARM_DATE) == '2018-07-27' & (FIRE_NAME == 'RIVER' | FIRE_NAME == 'RANCH'))$GIS_ACRES))
+```
+
+2. The table does not include the LNU Lightning Complex Fire because it is represented as three separate fires (the Hennessey, Walbridge, and Meyers fires)[^3] in the data set. Summing the acres burned in these three fires returns a figure close to the 363,220 burned in the LNU Lightning Complex Fire.
+```{r}
+sum(filter(dat, as.Date(ALARM_DATE) == '2020-08-17' & (FIRE_NAME == 'HENNESSEY' | FIRE_NAME == 'WALBRIDGE' | FIRE_NAME == 'MEYERS')) $GIS_ACRES)
+```
+
+3. The Rush Fire is ranked higher in the `top20` table than in the report because it does not distinguish the acres burned in Nevada as part of its total. The Cal-fire report states that the Rush Fire burned  271,911 acres in Nevada and 43,666 acres in California. The sum of these values approximately matches the value in the data set. It would be more accurate to represent the `GIS_ACRES` value of the Rush fire as 43666 in this data set for the purpose of the `top20` table.
+```{r}
+271911 + 43666
+filter(dat, FIRE_NAME == 'RUSH' & YEAR == 2012)$GIS_ACRES
+```
+
+4. The Witch Fire is not included in `top20` because this table uses *GIS calculated area in acres* rather than the *estimated area consumed in fire*, i.e., the `REPORT_AC`. The `REPORT_AC` value for the Witch Fire matches the report's figure of 197,990 exactly. (Perhaps a new table can be constructed using the non-NA maximum of the `REPORT_AC` and `GIS_ACRES` values.)
+```{r}
+select(filter(dat, FIRE_NAME == 'WITCH' & YEAR == 2007), GIS_ACRES, REPORT_AC)
+```
+
+5. The Klamath Theater Complex Fire is missing from the `top20` table because it consists of 11 separate wildfires which merged into a larger complex fire. It is difficult to pinpoint which 11 fires should be considered as part of the Klamath Theater Complex Fire to obtain the sum of 192,038 stated in the report.
+
+6. The Marble Cone Fire has a lower `GIS_ACRES` value in `top20` compared to the report.
+
+
+## C.2) Area Burned Over Time
+
+### Replica of Timeline Graph
+`ggplot2` functions are used to replicate the graph in [this](https://en.wikipedia.org/wiki/List_of_California_wildfires#Statistics) Wikipedia article.
+```{r}
+year <- c(1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022)
+
+area_burned <- c(873000, 345000, 173400, 365200, 44200, 282745, 309779, 526219, 209815, 752372, 283885, 215412, 1172850, 295026, 377340, 969890, 1020460, 311024, 222538, 736022, 1520362, 1593690, 422147, 109529, 168545, 869599, 601635, 625540, 880899, 669534, 1548429, 1975086, 277285, 4304379, 2569386, 363939)
+
+tl_data <- data.frame(year, area_burned)
+ggplot(tl_data, aes(year, area_burned)) +
+  geom_line(color = "#fc8c03", linewidth = 1) +
+  labs(y="California wildfire season size by area burned", color = "#55595D") +
+  scale_x_continuous(expand = c(0, 0), limits = c(1985, 2025), breaks = seq(1985,2025,5)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 4500000), breaks = seq(0, 4500000, 500000), minor_breaks = NULL) +
+  theme(aspect.ratio=10/31,
+        axis.line = element_line(colour = "#55595D", linewidth = 1),
+        panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "#E6E6E7", linewidth = 0.5),
+        plot.margin = margin(t = 0, r = 20, b = 0, l = 5, unit = "pt"))
+```
+
+### Timeline plot (1878-2021)
+This scatter plot displays the total acres burned each year in California.
+```{r}
+#dat_years <- arrange(distinct(filter(dat, !is.na(YEAR)),YEAR),YEAR)
+df <- dat %>% 
+  group_by(YEAR) %>%
+  filter(!is.na(YEAR)) %>% 
+  filter(STATE == 'CA') %>%
+  summarise(
+  total_GIS_ACRES = round(sum(GIS_ACRES))
+  )
+
+ggplot(df, aes(x = YEAR, y = total_GIS_ACRES)) +
+  geom_point(color = 'steelblue', size = 1) +
+  labs(y="California wildfire season size by area burned", color = "#55595D") +
+  scale_x_continuous(expand = c(0, 0), limits = c(1875, 2025), breaks = seq(1875,2025,10)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 4500000), breaks = seq(0, 4500000, 500000), minor_breaks = NULL) + 
+  theme(
+        axis.line = element_line(colour = "#55595D", linewidth = 1),
+        panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "#E6E6E7", linewidth = 0.5),
+        plot.margin = margin(t = 10, r = 20, b = 10, l = 5, unit = "pt")
+        )
+```
+
+
+
+
+
+
+
+
+
+
+
+## C.3) California Fire Season (part 1)
+In the article [“California Fire Season: In-Depth Guide”](https://wfca.com/articles/california-fire-season-in-depth-guide/), it is claimed that:
+
+> *"It is a common misconception that the most dangerous time for fires in California is during July and August. While there may be fewer fires in September and October, the fires that do occur are far more destructive and **burn through many more acres.** This explosive effect is due to a combination of dry vegetation from hot summer weather, and intense dry winds that blow through the state during fall."*
+
+They claim fires occur the **most frequently** during July and August. To verify this claim, count the number of recorded fires for each month.
+```{r}
+arrange(count(filter(dat, !is.na(MONTH_NAME) & STATE == "CA"), MONTH_NAME), desc(n))
+```
+It indeed appears that the months of July and August are the months where fires tend to start most frequently (or at least the two months with the most entries in this dataset). The other claim is that fires that occur in September and October burn more acres. First compare the total number of acres burned in those four months.
+```{r}
+four_months <- dat %>%
+  filter(MONTH_NAME %in% c('July', 'August','September','October')) %>% 
+  group_by(MONTH_NAME) %>% 
+  summarise(
+    GIS_ACRES_SUM = sum(GIS_ACRES),
+    GIS_ACRES_MEAN = mean(GIS_ACRES)
+  )
+
+arrange(select(four_months, MONTH_NAME, GIS_ACRES_SUM), desc(GIS_ACRES_SUM))
+```
+In total, July and August burn more acres than September and October. However, this may be because July and August fires were simply **more frequent**, so compare the **number of acres burned on average** for each month.
+
+```{r}
+arrange(select(four_months, MONTH_NAME, GIS_ACRES_MEAN), desc(GIS_ACRES_MEAN))
+```
+
+August has the most acres burned on average, but now October and September have higher averages than July. Now analyze the average acres burned as month pairs over the years. 
+
+```{r}
+July_Aug_Totals <- dat %>% 
+  filter(MONTH_NAME %in% c('July', 'August')) %>% 
+  select(YEAR, GIS_ACRES, MONTH_NAME) %>% 
+  group_by(YEAR) %>% 
+  summarise(
+    GIS_ACRES_MEAN = mean(GIS_ACRES)
+  ) %>% 
+  arrange(YEAR) %>% 
+  mutate(MONTH_PAIR = 'July and August')
+  
+Sep_Oct_Totals <- dat %>% 
+  filter(MONTH_NAME %in% c('September', 'October')) %>% 
+  select(YEAR, GIS_ACRES, MONTH_NAME) %>% 
+  group_by(YEAR) %>% 
+  summarise(
+    GIS_ACRES_MEAN = mean(GIS_ACRES)
+  ) %>% 
+  arrange(YEAR) %>% 
+  mutate(MONTH_PAIR = 'September and October')
+
+month_pairs_df <- union(July_Aug_Totals, Sep_Oct_Totals)
+
+ggplot(month_pairs_df) + 
+  geom_smooth(aes(x = YEAR, y = GIS_ACRES_MEAN, color = MONTH_PAIR), 
+              method = 'loess', formula = 'y ~ x', se = FALSE) +
+  labs(x= "Year", y="Average Acres Burned") +
+  guides(color=guide_legend("Months"))
+```
+
+September and October fires burned more acres on average until around 1997. The claim no longer seems to hold after that. The reason for this may be related to the first claim stated in section C.4).
+
+
+## C.4) California Fire Season (part 2)
+
+In the “California Fire Season: In-Depth Guide” article it is claimed that:
+
+> *“The length of the fire season in any given year in California depends on summer
+temperatures, rainfall, and wind, with the most fires historically occurring between
+**May and October**. However, recent data show that, due to rising temperatures
+and decreased rainfall, **the season is beginning earlier and ending later
+each year, approaching a year-round fire season**”*
+
+Historically, most wildfires in California occur between May and October. Verify this by counting the total number of entries by month and plotting the counts in a histogram.
+```{r}
+df <- filter(dat, !is.na(MONTH_NAME) & STATE == "CA")
+ggplot(df, aes(MONTH_NAME)) +
+  geom_bar() + 
+  labs(x= "Month") +
+  geom_hline(yintercept=1013, col="red")
+```
+
+
+
+
+
+The next claim is that the fire season is beginning earlier and ending later each year, approaching a year-round fire season. Compare the variance of the months across the decades (omitting decades before the 50s since there are less entries).
+```{r}
+decade_var <- group_by(filter(df, YEAR > 1949), DECADE) %>% 
+  summarise(
+  varMonth = var(MONTH)) %>% 
+  arrange(varMonth)
+
+ggplot(decade_var) +
+  geom_point(aes(x = DECADE, y = varMonth))
+```
+
+It appears that variance of the months in which fires occurred increased over the decades, i.e., it is approaching a year-round fire season.
+
+
+
+
+[^1]: [top20_acres.pdf](https://www.fire.ca.gov/media/4jandlhh/top20_acres.pdf)
+[^2]: [The Mendocino Complex Fire](https://en.wikipedia.org/wiki/Mendocino_Complex_Fire#:~:text=It%20consisted%20of%20two%20wildfires%2C%20the%20River%20Fire%20and%20Ranch%20Fire)
+[^3]: [The LNU Lightning Complex Fire](https://en.wikipedia.org/wiki/LNU_Lightning_Complex_fires#Fires)

@@ -1,0 +1,369 @@
+---
+title: "Lab 6: Unix Filters and Pipes"
+subtitle: "Stat 133, Fall 2022"
+output: 
+  github_document:
+    keep_html: true
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+> ### Learning Objectives:
+>
+> - Use Unix output redirection with `>` and `>>`
+> - Use Unix pipes with `|`
+> - Use filters: `cut`, `paste`, `sort`, `uniq`, `grep`
+
+### General Instructions
+
+- You DON'T need to use an `.Rmd` file for this lab
+- Part of this lab involves writing code in an `R` script file.
+- Name this file as `lab06-first-last.txt`, where `first` and `last` are your
+first and last names (e.g. `lab06-gaston-sanchez.txt`).
+- Submit your `.txt` file to bCourses, in the corresponding lab assignment.
+
+
+__See cheatsheet at the end of this document__
+
+
+-----
+
+
+## Climbing Ropes Data
+
+In this lab you are going to use data about __dynamic ropes__ better known
+as "climbing ropes" (a few rows shown below)
+
+```{r echo = FALSE, comment=""}
+dat <- read.csv("ropes.csv")
+head(dat)
+```
+
+
+The data comes in two file flavors:
+
+- `ropes.txt` (space-separated values)
+
+- `ropes.csv` (comma-separated values)
+
+
+Use the climbing ropes data to perform the following tasks. All the 
+commands have to be bash-shell commands (not R commands).
+
+- `cut` allows you to _select_ columns
+- `paste` allows you to _merge_ columns
+- `sort` can be used to _arrange_ lines
+- `sort` can also be used to _group by_ lines
+- `sort` and `uniq` can be used to _count_ occurrences
+- `grep` allows you to _filter_ rows
+
+
+-----
+
+
+## 1) Names of Ropes
+
+__1.1)__ Here's a pipeline to obtain the names of the first 5 ropes in the 
+`ropes.csv` data file. First we `cut` the first column (`Name`), then we skip 
+the first row with `tail +2`, and finally we `head` the first 5 elements:
+
+```{bash}
+# display names of first 5 ropes
+cut -f 1 -d "," ropes.csv | tail +2 | head -n 5
+```
+
+__1.2)__ We can use the previous pipeline, and redirect the output to a text 
+file `names5.txt` using the output redirection operator `>`.
+
+```{bash}
+# file with names of first 5 ropes
+cut -f 1 -d "," ropes.csv | tail +2 | head -n 5 > names5.txt
+```
+
+To confirm that `names5.txt` has the tent names, we can use `head` to display 
+the first five lines of the created file:
+
+```{bash}
+head names5.txt
+```
+
+__1.3)__ We can take the pipeline above, and pipe it with `sort` so that we 
+get the names sorted alphabetically
+
+```{bash}
+# display names of first 5 ropes, sorted alphabetically
+cut -f 1 -d "," ropes.csv | tail +2 | head -n 5 | sort
+```
+
+
+### 1.1) Your turn:
+
+__1.4)__ Modify the previous pipe to get the names of the first 5 ropes,
+from the file `ropes.txt`, sorting values alphabetically in decreasing order
+
+```{bash}
+cut -f 1 -d " " ropes.txt | tail +2 | head -n 5 | sort -r
+```
+
+
+__1.5)__ Using `ropes.txt`, write a pipe to get the names of the last 5 ropes 
+(no sorting required)
+
+```{bash}
+cut -f 1 -d " " ropes.txt | tail -n 5
+```
+
+
+__1.6)__ Using `ropes.txt`, write a pipe to get the `Name` and `Brand` of the 
+first 5 ropes
+
+```{bash}
+cut -f 1,2 -d " " ropes.txt | tail +2 | head -n 5
+```
+
+
+__1.7)__ Write a pipe to get the `Name`, `Diameter`, and `Weight` of the last 5 
+ropes in `ropes.txt`
+
+```{bash}
+cut -f 1,3,4 -d " " ropes.txt | tail -n 5
+```
+
+
+-----
+
+
+## 2) Listing and Counting Categories
+
+__2.1)__ Often, we want to list unique values. For example, say we are interested 
+in knowing which are the (unique) categories of `Brand`. We can pipe `sort` and 
+`uniq` for this purpose. Here's how:
+
+```{bash}
+cut -f 2 -d "," ropes.csv | tail +2 | sort | uniq
+```
+
+__2.2)__ What if, in addition to identify the unique categories, we want to 
+obtain their frequencies (i.e. counts)? Then, simply add the option `-c` for `uniq`
+
+```{bash}
+cut -f 2 -d "," ropes.csv | tail +2 | sort | uniq -c
+```
+
+
+### 2.1) Your turn:
+
+__2.3)__ Take the previous command and pipe it again with `sort` in order to 
+display the `Brand` categories (and their counts) in increasing order
+
+```{bash}
+cut -f 2 -d "," ropes.csv | tail +2 | uniq -c | sort
+```
+
+
+__2.4)__ With `ropes.csv`, write a pipe to list (i.e. display) the unique 
+categories of `Falls`
+
+```{bash}
+cut -f 5 -d "," ropes.csv | tail +2 | uniq
+```
+
+
+__2.5)__ With `ropes.csv`, write a pipe to list (i.e. display) the unique 
+categories of `Falls` and their counts
+
+```{bash}
+cut -f 5 -d "," ropes.csv | tail +2 | uniq -c
+```
+
+
+-----
+
+
+## 3) Selecting Rows
+
+__3.1)__ Another useful unix filter is `grep`. One basic use for this command is 
+to match certain pattern. For example, here's how to find (match) those rows 
+of ropes with brand `Beal`.
+
+```bash
+grep "Beal" ropes.csv
+```
+
+We can pipe the previous command with `wc` to count how many `Beal` ropes are 
+in `ropes.csv` (i.e. counting number of lines):
+
+```{bash}
+grep "Beal" ropes.csv | wc -l
+```
+
+
+__3.2)__ If you want to create a file with the data for `Beal` ropes, you can 
+redirect the output to a text file `beal-ropes.csv`:
+
+```bash
+grep "Beal" ropes.csv > beal-ropes.csv
+```
+
+Notice that the created file `beal-ropes.csv` does NOT contain names of columns 
+in the first row. If you want the file to include column names, you need to 
+write two commands like so:
+
+```bash
+head -n 1 ropes.csv > beal-ropes.csv
+grep "Beal" ropes.csv >> beal-ropes.csv
+```
+
+
+### 3.1) Your Turn
+
+__3.3)__ With `ropes.txt`, pipe `grep` with `wc` to count the number of ropes 
+from brand `Edelrid`
+
+```{bash}
+grep "Edelrid" ropes.txt | wc -l
+```
+
+
+__3.4)__ With `ropes.txt`, write a similar pipe to the one above to find how 
+many `Sterling` ropes are in this file
+
+```{bash}
+grep "Sterling" ropes.txt | wc -l
+```
+
+
+__3.5)__ With `ropes.txt`, write a pipe to create a file `sterling-ropes.txt` 
+containing the data for ropes of brand `Sterling`:
+
+```{bash}
+grep "Sterling" ropes.csv > sterling-ropes.txt
+```
+
+
+__3.6)__ With `ropes.txt`, write commands to create a file `pmi-ropes.txt` 
+containing the data for ropes of brand `PMI`, arranged by name alphabetically. 
+This file should have column names in the first line (i.e. first row).
+
+```{bash}
+head -n 1 ropes.txt > pmi-ropes.txt
+grep "PMI" ropes.txt | sort >> pmi-ropes.txt
+```
+
+
+-----
+
+
+## 4) More Pipes (your turn)
+
+__4.1)__ With `ropes.txt`, write a pipeline to obtain the unique categories of 
+`Brand` in decreasing order. The output of the pipeline should contain only the 
+categories (NOT the counts). _HINT:_ `cut`, `sort`, and `uniq` are your friends.
+
+```{bash}
+cut -f 2 -d " " ropes.txt | uniq -c | sort -r | cut -c 9-
+```
+
+
+__4.2)__ With `ropes.csv`, write a pipeline to obtain the counts (i.e. 
+frequencies) of the different `Weight` values (column 4), displayed from 
+largest to smallest (i.e. descending order). The first column corresponds to 
+count, the second column corresponds to weight. Redirect the output to a text 
+file `weight-counts.txt`. _HINT:_  `cut`, `tail`, `sort`, `uniq`; and 
+redirection `>` operator, are your friends.
+
+```{bash}
+cut -f 4 -d "," ropes.csv | tail +2 | uniq -c | sort -r > weight-counts.txt
+```
+
+
+__4.3)__ With `ropes.csv`, use output redirection commands to create a CSV file 
+`mammut-ropes.csv` containing data for the `Mammut` brand. Your CSV file should 
+include column names in the first row. 
+_HINT:_ redirection operators `>` and `>>`, as well as `head` and `grep` are your friends.
+
+```{bash}
+head -n 1 ropes.csv > mammut-ropes.csv
+grep "Mammut" ropes.csv >> mammut-ropes.csv
+```
+
+
+__4.4)__ Use the previously created file `mammut-ropes.csv` to select, 
+in separate commands, the columns `Name`, `Weight`, and `Force`. Store each 
+column in its own text file: `name.txt`, `weight.txt`, and `force.txt`
+
+```{bash}
+cut -f1 -d"," mammut-ropes.csv > name.txt
+cut -f4 -d"," mammut-ropes.csv > weight.txt
+cut -f6 -d"," mammut-ropes.csv > force.txt
+```
+
+
+__4.5)__ Use the previously created files `name.txt`, `weight.txt`, and 
+`force.txt` to `paste` them (i.e. merge them), in that order, into a new CSV 
+file `mammut-forces.csv` (comma separated values!!!).
+
+```{bash}
+paste -d"," name.txt weight.txt force.txt > mammut-forces.csv
+```
+
+
+__4.6)__ Use `ropes.txt`, to write a pipeline to list (display) the five 
+heaviest ropes (their Name, Brand, and Weight) in decreasing order (by weight).
+
+```{bash}
+cut -f1,2,4 -d" " ropes.txt | tail +2 | sort -k3 -r | head -n 5
+```
+
+
+-----
+
+
+## Cheat sheet: Unix filters
+
+
+| Command                     | Description                   | R alternative             |
+|-----------------------------|-------------------------------|---------------------------|
+| `wc nba2017-players.csv`    | count lines, words, and bytes | `object.size()`, `nrow()` |
+| `wc -l nba2017-players.csv` | count number of lines         | `nrow()`                  |
+| `head nba2017-players.csv`  | inspect first 10 rows         | `head()`                  |
+| `tail nba2017-players.csv`  | inspect last 10 rows          | `tail()`                  |
+| `less nba2017-players.csv`  | see conropes with a paginator | `View()`                  |
+
+
+Extracting columns with __`cut`__
+
+| Option    | Description                                        |
+|-----------|----------------------------------------------------|
+|  `-f` 1,5 | return columns 1 and 5, delimited by tabs.         |
+|  `-f` 1,5 | return columns 1 through 5, delimited by tabs.     |
+|  `-d ","` | use commas as the delimiters.                      |
+|  `-c 2-7` | return characters 2 through 7 from the file.       |
+
+
+Sorting lines with __`sort`__
+
+| Option | Description                                          |
+|--------|------------------------------------------------------|
+|  `-n`  | sort in numerical order rather than alphabetically.  |
+|  `-r`  | sort in reverse order, z to a or decreasing numbers. |
+|  `-f`  | fold uppercase into lowercase (i.e. ignore case).    |
+|  `-u`  | return a unique representative of repeated items.    |
+|  `-k 3`| sort lines based on column 3 (tab or space delimiters) |
+|  `-t ","` | use commas for delimiters.                      |
+|  `-b`  | ignore leading blanks.                               |
+|  `-d`  | sort in dictionary order.                            |
+
+
+Isolating unique lines with __`uniq`__
+
+| Option  | Description                                        |
+|---------|----------------------------------------------------|
+|  `-c`   | adds a count of how many times each line occurred. |
+|  `-u`   | lists only lines that are not repeated.            |
+|  `-d`   | lists only lines that are duplicated.              |
+|  `-i`   | ignore case when determining uniqueness            |
+|  `-f 4` | ignore the first 4 fields (space delimiter)        |
