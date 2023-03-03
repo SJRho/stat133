@@ -1,0 +1,34 @@
+---
+title: "hw3-samuel-rho"
+author: "Samuel Rho"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(scales)
+```
+
+# {.tabset .tabset-fade .tabset-pills}
+## 1) Look for a Graphic
+
+
+
+## 2) Electricity Usage Graph
+
+### 2.1) Graphic's Assessment
+
+### 2.2) Graphic Replication
+```{r}
+# PG&E Data
+Date = seq(as.Date("2021-08-27"), as.Date("2021-09-27"), by="days")
+Usage = c(4.3, 5, 7, 3.8, 5.6, 2.6, 4.8, 3.2, 2.6, 5.1, 3.3, 3.9, 2.5, 7.1, 3, 2.2, 6.1, 3.2, 3.2, 3.9, 5.6, 3.4, 3.3, 3.3, 4.4, 5.3, 2.9, 7.1, 3.3, 2.5, 3.1, 4.5)
+Weather = c(70, 71, 65, 63, 62, 63, 62, 61, 61, 62, 67, 66, 67, 64, 64, 64, 65, 65, 62, 61, 62, 63, 64, 65, 68, 72, 65, 63, 63, 62, 62, 65)
+pge = data.frame(Date, Usage, Weather)
+head(pge, n = 10)
+```
+
+
+## 3) Visualizing Household Expenditures
