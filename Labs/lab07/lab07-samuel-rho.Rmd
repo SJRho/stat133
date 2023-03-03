@@ -1,0 +1,405 @@
+---
+title: "Lab 7: Basic Data Objects"
+subtitle: "Stat 133, Spring 2023"
+output: 
+  html_document:
+    toc: true
+---
+
+> ### Learning Objectives
+>
+> - Work with vectors of different data types
+> - Understand the concept of _atomic_ structures
+> - Learn how to subset and slice R vectors
+> - Understand the concept of _vectorization_
+> - Understand _recycling_ rules in R
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+```
+
+
+### General Instructions
+
+- Write your descriptions, explanations, and code in an `Rmd` (R markdown) file.
+- Name this file as `lab07-first-last.Rmd`, where `first` and `last` are your
+first and last names (e.g. `lab07-gaston-sanchez.Rmd`).
+- Knit your `Rmd` file as an html document (default option).
+- Submit your `Rmd` and `html` files to bCourses, in the corresponding lab assignment.
+
+
+
+## 1) Data: US State Facts and Figures (1970s)
+
+Some weeks ago we looked at a couple of approaches to manipulate tables and create 
+statistical graphics via `"dplyr"` and `"ggplot2"`. As you now know, the default 
+object that R provides to handle data tables is the so called `data.frame`. 
+It turns out that data frames are formed by a set of R vectors, which is the 
+main topic of today's session.
+
+In this lab, you are going to work with the data set `state` that has to with
+US State Facts and Figures in the 1970s. Specifically, we are going to use the 
+following objects:
+
+
+```{r}
+# vectors
+name = state.name
+area = state.area
+region = state.region
+population = state.x77[ ,"Population"]
+income = state.x77[ ,"Income"]
+illiteracy = state.x77[ ,"Illiteracy"]
+```
+
+
+### 1.1) Your turn: data-types
+
+Use the function `typeof()` to see the data type of each of the above vectors.
+
+```{r}
+typeof(name)
+typeof(area)
+typeof(region)
+typeof(population)
+typeof(income)
+typeof(illiteracy)
+
+```
+
+
+-----
+
+
+## 2) Subsetting
+
+Create a vector `four` by selecting the first four elements in `name`:
+
+```{r}
+four <- head(name, n = 4)
+```
+
+Single brackets `[ ]` are used to subset (i.e. subscript, split, slice) vectors.
+For instance, to extract the first element in `name` we pass `1` inside the
+brackets:
+
+```{r}
+four[1]
+```
+
+
+### 2.1) Your turn: subsetting vectors
+
+Without running the code, try to guess the output of the following commands, and 
+then run them to check your guess:
+
+a) number 2: `four[2]`
+
+```{r}
+# Guess: "Alaska"
+four[2]
+```
+
+
+b) an index of zero: `four[0]`?
+
+```{r}
+# Guess: NA
+four[0]
+# Answer: character(0)
+```
+
+
+c) a negative index: `four[-1]`?
+
+```{r}
+# Guess: "Arkansas"
+four[-1]
+# Answer: "Alaska"   "Arizona"  "Arkansas"
+# or everything but the first element
+```
+
+
+d) various negative indices: `four[-c(1,2,3)]`?
+
+```{r}
+# Guess: "Arkansas"
+four[-c(1,2,3)]
+```
+
+
+e) an index greater than the length of the vector: `four[5]`?
+
+```{r}
+# Guess: NA
+four[5]
+```
+
+
+f) repeated indices: `four[c(1,2,2,3,3,3)]`?
+
+```{r}
+# Guess: "Alabama" "Alaska" "Alaska" "Arizona" "Arizona" "Arizona"
+four[c(1,2,2,3,3,3)]
+```
+
+
+-----
+
+
+## 3) Sequences
+
+Often, you will need to generate vectors of numeric sequences, like the first 
+five elements `1:5`, or from the first till the last element `1:length(name)`. 
+R provides the colon operator `:`, and the functions `seq()`, and `rep()` 
+to create various types of sequences.
+
+
+### 3.1) Your turn: sequences and repetitions
+
+Figure out how to use `seq()`, and bracket notation, to extract:
+
+a) all the even elements in `name` (i.e. extract positions 2, 4, 6, etc)
+
+```{r}
+name[seq(2,length(name),2)]
+
+```
+
+
+b) all the odd elements in `area` (i.e. extract positions 1, 3, 5, etc)
+
+```{r}
+area[seq(1,length(area),2)]
+
+```
+
+
+c) all multiples of 5 (e.g. 5, 10, 15, etc) of `income`
+
+```{r}
+income[seq(5,length(income),5)]
+
+```
+
+
+d) elements in positions 10, 20, 30, 40, etc of `population`
+
+```{r}
+population[seq(10,length(population),10)]
+
+```
+
+
+e) all the even elements in `name` but this time in reverse order;
+_hint_ the `rev()` function is your friend.
+
+```{r}
+rev(name[seq(2,length(name),2)])
+
+```
+
+
+-----
+
+
+## 4) Logical Subsetting and Comparisons
+
+Another kind of subsetting/subscripting style is the so-called 
+__logical subsetting__. This kind of subsetting typically takes place when 
+making comparisons. 
+
+A __comparison operation__ occurs when you use comparison operators such as: 
+
+- `>` greater than
+- `>=` greater than or equal
+- `<` less than
+- `<=` less than or equal
+- `==` equal
+- `!=` different
+
+For example:
+
+```{r}
+area_four <- area[1:4]
+
+# elements greater than 100000
+area_four[area_four > 100000]
+
+# elements less than 100000
+area_four[area_four < 100000]
+
+# elements less than or equal to 53000
+area_four[area_four <= 53000]
+
+# elements different from 50000
+area_four[area_four != 50000]
+```
+
+In addition to using comparison operators, you can also use __logical operators__ 
+to produce a logical vector. The most common type of logical operators are:
+
+- `&` AND
+- `|` OR
+- `!` negation
+
+Run the following commands to see what R does:
+
+```{r}
+# AND
+TRUE & TRUE
+TRUE & FALSE
+FALSE & FALSE
+
+# OR
+TRUE | TRUE
+TRUE | FALSE
+FALSE | FALSE
+
+# NOT
+!TRUE
+!FALSE
+```
+
+Logical operators allow you to combine several comparisons:
+
+```{r}
+# vectors for first 10 elements
+name10 <- name[1:10]
+area10 <- area[1:10]
+pop10 <- population[1:10]
+inc10 <- income[1:10]
+
+# names of first 10 states with area greater than 100,000
+name10[area10 > 100000]
+
+# names of first 10 states with populations between 2000 and 3000 (exclusive)
+name10[pop10 > 2000 & pop10 < 3000]
+```
+
+
+### 4.1) Your turn: logical subsetting
+
+Write commands, using bracket notation, to answer the following questions 
+(you may need to use `is.na()`, `min()`, `max()`, `which()`, `which.min()`, `which.max()`):
+
+a) name of states from region `"West"`
+
+```{r}
+name[region == "West"]
+
+```
+
+
+b) name of states from regions `"West"` or `"Northeast"`
+
+```{r}
+name[region == "West" | region == "Northeast"]
+
+```
+
+
+c) number (count) of states in the `"South"` region; _hint_: the `sum()`
+function is your friend
+
+```{r}
+sum(!is.na(region[which(region == "South")]))
+
+```
+
+
+d) name of state with largest area; _hint_: the `which.max()`
+function is your friend
+
+```{r}
+name[which.max(area)]
+
+```
+
+
+e) largest Population of states in the `"West"` region
+
+```{r}
+max(population[which(region == "West")])
+
+```
+
+
+f) name of states with illiteracy percentage of at most 60%, and population of 
+at least 2000 
+
+```{r}
+name[illiteracy <= 0.6 & population >= 2000]
+
+```
+
+
+g) name of state in the `"Northeast"` with income equal to the median income 
+of states in the `"Northeast"`
+
+```{r}
+name[income == median(income[region == "Northeast"])]
+
+```
+
+
+-----
+
+
+## 5) Matrices
+
+A vector can be extended into a 2-dimensional object in the form of a __matrix__ 
+(which is a 2-dimensional array).
+
+For instance, let's create a matrix with the `income` and `illiteracy` values 
+of the first five states:
+
+```{r}
+II <- matrix(c(income[1:5], illiteracy[1:5]), nrow = 5, ncol = 2)
+II
+```
+
+You can give names to rows and columns with the functions `rownames()` and `colnames()`:
+
+```{r}
+rownames(II) <- name[1:5]
+colnames(II) <- c("income", "illiteracy")
+II
+```
+
+
+### 5.1) Your Turn
+
+a) Use the column-binding function `cbind()` to create a matrix `AP` with 
+columns `area` and `population`, for the first 10 states; display `AP`
+
+```{r}
+AP <- cbind(area, population)
+AP[1:10,]
+```
+
+
+b) Use the function `matrix()` to create a matrix `west` with `income` and
+`illiteracy` values for states in the `"West"`. You will need to provide an
+input vector combining `income` and `illiteracy` of the appropriate states.
+Give meaningful row and column names.
+
+```{r}
+west <- matrix(cbind(income[region=="West"], illiteracy[region=="West"]), ncol = 2)
+rownames(west) <- name[region=="West"]
+colnames(west) <- c("income", "illiteracy")
+west
+
+```
+
+
+c) If you create a matrix `NAR` by column-binding `name`, `area` and `region` 
+for all states, what is the resulting data type---returned by `typeof()`---of
+`NAR`?
+
+```{r}
+NAR <- matrix(cbind(name, area, region), ncol = 3)
+typeof(NAR)
+```
+
+
