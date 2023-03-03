@@ -1,5 +1,5 @@
 ---
-title: "hw3-samuel-rho"
+title: "HW 3: Data Visualization"
 author: "Samuel Rho"
 output: html_document
 ---
@@ -14,7 +14,29 @@ library(scales)
 # {.tabset .tabset-fade .tabset-pills}
 ## 1) Look for a Graphic
 
+a. A screenshot of the graphic:
 
+```{r out.width='95%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("unemploymentgap.png")
+```
+
+b. ["How Fast Is The Economy Recovering?"](https://projects.fivethirtyeight.com/us-economy-coronavirus/)
+Authors: Julia Wolfe, Amelia Thomson-DeVeaux
+
+c. Description/explanation of the graphic's context:
+
+* The horizontal axis represents time and has tick marks at the start of every 3 months. The vertical axis represents the seasonally adjusted unemployment rate, by race in the U.S.
+* This graphic visualizes data roughly between January 2020 and October 2021.
+* This graphic consists of three timeseries graphs.
+* This graphic is static. There is no interactive component or animation.
+
+d. A pink or lavender rose (#BF7CBB) is used for the hispanic unemployment rate. Similarly a dark teal (#63ABB0), and metallic yellow (#BCB87D) are used for the black and white unemployment rates respectively. Note that the area underneath each of the lines have a similar color and their opacity is less than 1. For some portions of the graph this results in a mixing of color.
+
+e. The graph is mostly colorblind friendly but those with deuteranopia may have trouble distinguishing the hispanic and black unemployment rate colors.
+
+f. The graphic has a data-ink ratio very close to 1. Every element of the graphic conveys a sufficient amount of information for the purpose of the article. The filled in areas help emphasize which groups had relatively higher unemployment rates at different points in time. The gridlines and other less significant elements use lighter colors to stay in the background.
+
+g. The text that points toward the maximum unemployment rate gap between Hispanic and white workers has a vertical dotted line to very clearly explain where and what the gap is. I also noted that there is a very thin white border between each of the timeseries lines, making them visually more distinguished, but without adding more visual clutter if they used a thin black border.
 
 ## 2) Electricity Usage Graph
 
@@ -32,3 +54,18 @@ head(pge, n = 10)
 
 
 ## 3) Visualizing Household Expenditures
+
+```{r}
+dat = read_csv(
+    file = "expenses.csv",
+    col_types = list(
+        concept = col_character(),
+        amount = col_double(),
+        date = col_date(format = "%m/%d/%y"),
+        category = col_character(),
+        mode = col_character()
+        )
+    )
+```
+
+### 3.1) Data Visualizations
