@@ -146,28 +146,92 @@ ggplot(tme) +
 
 b. Create a visualization to display the top-5 annual expenditure categories in every year.
 
-```{r}
-yearly_exp <- group_by(dat, year = lubridate::floor_date(date, "year")) %>% 
+```{r, echo=TRUE}
+# Group all expenditures by year, then sum of each category.
+yearly_exp <- group_by(dat, year = year(date)) %>% 
     group_by(category, .add=TRUE) %>% 
     summarise(
         expenditure = sum(amount),
         .groups = "keep"
     )
 
-exp18 <- arrange(filter(yearly_exp, year=="2018-01-01" & category != "debt"), desc(expenditure))
-exp19 <- arrange(filter(yearly_exp, year=="2019-01-01"), desc(expenditure)), n =5)
-exp20 <- arrange(filter(yearly_exp, year=="2020-01-01"), desc(expenditure)), n =5)
-exp21 <- arrange(filter(yearly_exp, year=="2021-01-01"), desc(expenditure)), n =5)
-exp22 <- arrange(filter(yearly_exp, year=="2022-01-01"), desc(expenditure)), n =5)
+# Spread the expenditures into separate columns by year
+x <- spread(yearly_exp, key = year, value = expenditure)
 
-# df <- data.frame(
-#     top18$category,
-#     top19$category,
-#     top20$category,
-#     top21$category,
-#     top22$category)
-# names(df) <- seq(2018,2022,1)
-# view(df)
+# Keep track of the ordering of the categories in x
+categories <- x$category
+
+# Pull the 2018 columns expenditures
+exp18 <- pull(x,2)
+
+# Sort the top 5 2018 expenditures values in decreasing order.
+top5_18 <- head(sort(exp18,decreasing=TRUE),n=5)
+
+# Find which categories those top 5 those values correspond to.
+top5_18_cat <- categories[match(top5_18,exp18)]
+
+# Do this for years 2019,2020,2021,2022
+top5_19_cat <- categories[match(head(sort(pull(x,3),decreasing=TRUE),n=5),pull(x,3))]
+top5_20_cat <- categories[match(head(sort(pull(x,4),decreasing=TRUE),n=5),pull(x,4))]
+top5_21_cat <- categories[match(head(sort(pull(x,5),decreasing=TRUE),n=5),pull(x,5))]
+top5_22_cat <- categories[match(head(sort(pull(x,6),decreasing=TRUE),n=5),pull(x,6))]
+
+# Put these top 5 categories in each year into a data frame.
+top5_annual_exp <- data.frame("2018" = top5_18_cat,
+                              "2019" = top5_19_cat,
+                              "2020" = top5_20_cat,
+                              "2021" = top5_21_cat,
+                              "2022" = top5_22_cat)
+
+top5_annual_exp
 ```
 
 c. Create a plot that lets us compare, over time, the cost-of-living spending versus the discretionary spending.
+
+```{r}
+colCategories <- c("insurance", "housing", "utilities", "food", "transportation",
+                   "healthcare", "debt")
+discCategories <- c("recreation", "personal", "gifts", "vacation")
+
+# Add a column to the data frame that categorizes the spending type of each expenditure.
+dat2 <- mutate(dat, spendingType = case_when(category %in% colCategories ~ "cost-of-living",
+                                             category %in% discCategories ~ "discretionary",
+                                             TRUE                ~ NA_character_))
+
+
+colVsDiscSpending <- group_by(dat2, month = lubridate::floor_date(date, "month")) %>%
+    summarize(
+        spending = sum(amount),
+        colSpending = sum(amount[spendingType == "cost-of-living"]),
+        discSpending =sum(amount[spendingType == "discretionary"])
+            )
+ggplot(colVsDiscSpending) +
+    geom_line(aes(x = month, y = colSpending, color = "cost-of-living"), linewidth=1) +
+    geom_line(aes(x = month, y = discSpending, color = "discretionary"), linewidth=1) +
+    scale_y_continuous(breaks = seq(0,11000,1000),
+                       labels = number_format(prefix="$",big.mark = ","),
+                       limit = c(0,11000)
+                       ) +
+    scale_x_date(date_breaks = "3 month",
+                 date_labels = "%b\n%y"
+                 ) +
+    coord_cartesian(expand = FALSE) +
+    theme(
+        plot.title = element_text(hjust=0.5, size=20),
+        plot.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "#E5E5E5"),
+        axis.title = element_blank(),
+        legend.position = "right",
+        legend.title = element_blank(),
+        legend.background = element_blank(),
+        legend.text = element_text(colour="#585858")
+        ) +
+    labs(title="cost-of-living vs. discretionary spending over time") +
+    scale_color_manual(breaks=c("cost-of-living", "discretionary"),
+                       values=c("cost-of-living" = "#000000","discretionary" ='#3B86BE'))
+
+
+```
+
